@@ -1,0 +1,735 @@
+---
+title: "resig-global"
+output: word_document
+date: '2022-07-08'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+ install/load pkgs
+
+```{r warning=FALSE, message=FALSE}
+#install.packages(c("ggplot2", "dplyr", "tidyverse"))
+lapply(c("ggplot2",  "tidyverse", "dplyr"), require, character.only = TRUE)
+```
+
+## Note
+working age population 
+OECD: 15 to 64
+
+prime-working-age population 
+US: 25 to 54
+
+Age group difference,  young workers usually have higher unemployment
+To control the effects, I set age group 20/25 +
+
+Can't find labor force participation rate by ethnicity
+
+# labor force participation rate, 2020-2021 annual, age 25-54
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+# Read data, OECD lfpr data by gender
+oecd_lfpr_m <- as_tibble(read.csv("~/Desktop/great resignation/OECD datasets/lfpr men 25-54.csv"))
+oecd_lfpr_w <- as_tibble(read.csv("~/Desktop/great resignation/OECD datasets/lfpr women 25-54.csv"))
+```
+
+
+```{r}
+# OECD lfpr by gender 2020-2021 annual, age 25-54
+## subset data
+o_l_m <- oecd_lfpr_m %>% filter(Time >2018) %>% select(Country, Time, Value) %>% filter(Country %in% c("United States","Canada", "United Kingdom","Germany", "France", "Italy", "Spain", "Netherlands", "Switzerland", "Sweden", "Belgium", "Ireland", "Norway", "Denmark", "Finland"))
+
+o_l_w <-oecd_lfpr_w %>% filter(Time >2018) %>% select(Country, Time, Value)  %>% filter(Country %in% c("United States","Canada", "United Kingdom","Germany", "France", "Italy", "Spain", "Netherlands", "Switzerland", "Sweden", "Belgium", "Ireland", "Norway", "Denmark", "Finland"))
+
+## only include US, Canada, Germany, France, United Kingdom, Italy, Spain, Netherlands, Switzerland, Sweden, Poland, Belgium, Austria, Ireland, Norway, Denmark, Finland, United States, Canada, Australia, New Zealand
+
+## or exclude countries: Australia, Czech, Japan, Korea, Mexico, New Zealand, Slovak, Turky, OECD, Israel, Chile, Slovenia, Estonia, Lithuania, Latvia, columbia, Costa Rica
+
+```
+
+
+```{r}
+library(ggplot2)
+library(viridis)
+#install.packages("hrbrthemes")
+library(hrbrthemes)
+```
+
+### men plot
+```{r}
+# MALE
+o_l_m$Time <- as.factor(o_l_m$Time) # convert integer to factor
+plot.men.labor <-ggplot(o_l_m, aes(x=Time, y=Value, fill= Time)) +
+  geom_bar(position = "dodge", stat = "identity", width = 0.6) +
+  ggtitle("men age 25-54 labor force participation rate") +
+  scale_fill_viridis(discrete = T, option = "E") +
+  facet_wrap(~Country, nrow = 3, ncol = 5) +
+  theme_bw() +
+  theme(legend.position="none") +
+  xlab("Year")+
+  ylab("Labor force participation rate")+
+  coord_flip(ylim = c(85, 100))
+plot.men.labor
+```
+#### comment:
+In general, men's lfprs are above 85. Switzerland has the highest men's lfprs, around 95.
+some countries' lfprs in 2021 are higher than of that in 2020 even 2019. But Germany, Italy, UK, US, Spain, Finland, Ireland are lower than it in 2019.
+
+notes: other factor, migrant labor. lower participation. US, Spain, Italy.
+look migrant labor dependence. Eurostats migrant flows.  childcare provision Netherlands (private, vouchers), market of childcare increased, opening of private childcare centers. Germany(local government), public support on childcare. modality, the ways of childcare provision.
+
+### women plot
+```{r}
+# FEMALE
+o_l_w$Time <- as.factor(o_l_w$Time) # convert integer to factor
+plot.women.labor <- ggplot(o_l_w, aes(x=Time, y=Value, fill= Time)) +
+  geom_bar(position = "dodge", stat = "identity",  width = 0.6) +
+  ggtitle("women age 25-54 labor force participation rate") +
+  scale_fill_viridis(discrete = T, option = "E") +
+  facet_wrap(~Country, nrow = 3, ncol = 5) +
+  theme_bw() +
+  theme(legend.position="none") +
+  xlab("Year")+
+  ylab("Labor force participation rate")+
+  coord_flip(ylim = c(60, 90))
+plot.women.labor
+```
+#### comment:
+All women's lfprs are below 90. Sweden, Switzerland, Finland are higher than 85. Italy has the lowest, between 65-70. US, Switzerland, Germany, and Italy's rates in 2021 are lower than in 2019.
+
+### gender comparison plot 
+```{r}
+#merge men and women data
+o_l_all <- merge(o_l_m, o_l_w, by=c("Country", "Time"))
+names(o_l_all)[3] <- 'men'
+names(o_l_all)[4] <- 'women'
+
+#install.packages("reshape2")
+library(reshape2)
+o_l_all_m <- melt(o_l_all, id.vars = c('Country', 'Time'))
+names(o_l_all_m)[3] <- 'gender'
+```
+
+```{r}
+# gender comparison
+o_l_all_m$Time <- as.factor(o_l_m$Time) # convert integer to factor
+ggplot(o_l_all_m, aes(x=Time, y=value, fill= gender)) +
+  geom_bar(position = "dodge", stat = "identity", width = 0.6) +
+  ggtitle("age 25-54 labor force participation rate") +
+  scale_fill_manual(values = c("men"="cornflowerblue", "women"="coral"))+ 
+  facet_wrap(~Country, nrow = 3, ncol = 5) +
+  theme_bw() +
+  theme(legend.title = element_blank()) +
+  xlab("Year")+
+  ylab("Labor force participation rate")+
+  coord_flip(ylim = c(50, 100))
+```
+#### comment:
+Women's lfprs are generally lower than men's. Italy has the largest gender gap, then US, Ireland.
+
+
+## other age: labor force participation rate, age 15-64 working age population
+comment: the lfpr of population age 15-64 is generally lower than that of age 25-54
+```{r}
+# read oecd data 15-64 lfpr
+
+oecd_lfpr_m1 <- as_tibble(read.csv("~/Desktop/great resignation/OECD datasets/lfpr men 15-64.csv"))
+oecd_lfpr_w1 <- as_tibble(read.csv("~/Desktop/great resignation/OECD datasets/lfpr women 15-64.csv"))
+
+# select countries
+o_l_m1 <- oecd_lfpr_m1 %>% filter(Time >2018) %>% select(Country, Time, Value) %>% filter(Country %in% c("United States","Canada", "United Kingdom","Germany", "France", "Italy", "Spain", "Netherlands", "Switzerland", "Sweden", "Belgium", "Ireland", "Norway", "Denmark", "Finland"))
+
+o_l_w1 <-oecd_lfpr_w1 %>% filter(Time >2018) %>% select(Country, Time, Value)  %>% filter(Country %in% c("United States","Canada", "United Kingdom","Germany", "France", "Italy", "Spain", "Netherlands", "Switzerland", "Sweden", "Belgium", "Ireland", "Norway", "Denmark", "Finland"))
+
+# merge data
+o_l_all1 <- merge(o_l_m1, o_l_w1, by=c("Country", "Time"))
+names(o_l_all1)[3] <- 'men'
+names(o_l_all1)[4] <- 'women'
+
+o_l_all_m1 <- melt(o_l_all1, id.vars = c('Country', 'Time'))
+names(o_l_all_m1)[3] <- 'gender'
+```
+
+###plot1
+
+```{r}
+# gender comparison
+o_l_all_m1$Time <- as.factor(o_l_m1$Time) # convert integer to factor
+ggplot(o_l_all_m1, aes(x=Time, y=value, fill= gender)) +
+  geom_bar(position = "dodge", stat = "identity", width = 0.6) +
+  ggtitle("age 15-64 labor force participation rate") +
+  scale_fill_manual(values = c("men"="cornflowerblue", "women"="coral"))+ 
+  facet_wrap(~Country, nrow = 3, ncol = 5) +
+  theme_bw() +
+  theme(legend.title = element_blank()) +
+  xlab("Year")+
+  ylab("Labor force participation rate")+
+  coord_flip(ylim = c(50, 100))
+```
+
+###plot2
+```{r}
+# gender comparison
+o_l_all1$Time <- as.numeric(o_l_all1$Time) # convert to numeric
+
+ggplot(o_l_all1, aes(x=Time)) +
+  geom_line(aes(y=men), color = "cornflowerblue")+
+  geom_line(aes(y=women), color = "coral") +
+  ggtitle("age 15-64 labor force participation rate") +
+  facet_wrap(~Country, nrow = 3, ncol = 5) +
+  theme_bw() +
+  theme(legend.title = element_blank()) +
+  xlab("Year")+
+  ylab("Labor force participation rate")
+
+```
+# net child cost
+definitions:
+https://data.oecd.org/benwage/net-childcare-costs.htm
+
+This indicator measures the net childcare costs for parents using full-time centre-based childcare, after any benefits designed to reduce the gross childcare fees. Childcare benefits can be received in the form of childcare allowances, tax concessions, fee rebates and increases in other benefit entitlements. Net childcare costs are calculated for both couples and lone parents assuming two children aged 2 and 3. For couples, one parent earns 67% of the average wage whereas the other earns either minimum wage, 67% or 100% of the average wage.
+
+
+```{r}
+# 67 average
+oecd_chdcost <- as_tibble(read.csv("~/Desktop/great resignation/OECD datasets/net childcare cost 67average 2004-2021.csv")) 
+
+oecd_chdcost_sub <- oecd_chdcost %>% select(LOCATION, TIME, Value) %>% filter(LOCATION %in% c("USA","CAN", "GBR","DEU", "FRA", "ITA", "ESP", "NLD", "CHE", "SWE", "BEL", "IRL", "NOR", "DNK", "FIN"))
+
+# "United States","Canada", "United Kingdom","Germany", "France", "Italy", "Spain", "Netherlands", "Switzerland (CHE)", "Sweden", "Belgium", "Ireland", "Norway", "Denmark", "Finland"
+
+#rename columns
+colnames(oecd_chdcost_sub) <- c('country', 'year', 'childcare_costs')
+
+# replace country names
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'USA'] <- "United States"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'CAN'] <- "Canada"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'GBR'] <- "United Kingdom"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'DEU'] <- "Germany"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'FRA'] <- "France"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'ITA'] <- "Italy"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'ESP'] <- "Spain"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'NLD'] <- "Netherlands"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'CHE'] <- "Switzerland"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'SWE'] <- "Sweden"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'BEL'] <- "Belgium"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'IRL'] <- "Ireland"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'NOR'] <- "Norway"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'DNK'] <- "Denmark"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'FIN'] <- "Finland"
+```
+
+### plots
+```{r}
+
+
+# 2004-2021
+plot_cost <- ggplot(oecd_chdcost_sub, aes(year, childcare_costs, group = country)) +
+  geom_line(aes(color = country))+
+  ggtitle("2004-2021 child costs") +
+  facet_wrap(~country, nrow = 3, ncol = 5) +
+  theme_bw() +
+  theme(legend.title = element_blank()) +
+  xlab("Year")+
+  ylab("Child costs")
+plot_cost
+
+# 2018-2021
+plot_cost1 <- ggplot(oecd_chdcost_sub[which(oecd_chdcost_sub$year>2017),], aes(year, childcare_costs, group = country)) +
+  geom_line(aes(color = country))+
+  ggtitle("2018-2021 child costs") +
+  facet_wrap(~country, nrow = 3, ncol = 5) +
+  theme_bw() +
+  theme(legend.title = element_blank()) +
+  xlab("Year")+
+  ylab("Child costs")
+plot_cost1
+```
+
+### Notes
+
+Germany's child costs have remained high (above 25) from 2018 to 2021
+
+Nordic countries' child costs have remained low (below 20)  from 2018 to 2021
+
+Before COVID, the US has highest child cost level nearly 30, but droped significant since 2020. 15 at 2021
+
+
+```{r}
+# 67 average / household income
+oecd_chdincome <- as_tibble(read.csv("~/Desktop/great resignation/OECD datasets/net childcare 67average_income 2004-2021.csv")) 
+
+oecd_chdincome_sub <- oecd_chdincome %>% select(LOCATION, TIME, Value) %>% filter(LOCATION %in% c("USA","CAN", "GBR","DEU", "FRA", "ITA", "ESP", "NLD", "CHE", "SWE", "BEL", "IRL", "NOR", "DNK", "FIN"))
+
+colnames(oecd_chdincome_sub) <- c('country', 'year', 'childcare_costs_percent')
+
+
+# replace country names
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'USA'] <- "United States"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'CAN'] <- "Canada"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'GBR'] <- "United Kingdom"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'DEU'] <- "Germany"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'FRA'] <- "France"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'ITA'] <- "Italy"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'ESP'] <- "Spain"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'NLD'] <- "Netherlands"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'CHE'] <- "Switzerland"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'SWE'] <- "Sweden"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'BEL'] <- "Belgium"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'IRL'] <- "Ireland"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'NOR'] <- "Norway"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'DNK'] <- "Denmark"
+oecd_chdcost_sub$country[oecd_chdcost_sub$country == 'FIN'] <- "Finland"
+
+```
+
+same as the previous net childcare costs
+```{r}
+# 2018-2021
+plot_income1 <- ggplot(oecd_chdincome_sub[which(oecd_chdincome_sub$year>2017),], aes(year, childcare_costs_percent, group = country)) +
+  geom_line(aes(color = country))+
+  ggtitle("2018-2021 child costs as percentage of household income") +
+  facet_wrap(~country, nrow = 3, ncol = 5) +
+  theme_bw() +
+  theme(legend.title = element_blank()) +
+  xlab("Year")+
+  ylab("Child costs percent of income")
+
+plot_income1
+
+```
+
+# Financial disincentive to enter employment with childcare costs
+
+https://data.oecd.org/benwage/financial-disincentive-to-enter-employment-with-childcare-costs.htm#indicator-chart
+
+This indicator measures the percentage of earnings lost to either higher taxes or lower benefits when a parent of two children takes up full-time employment and uses centre-based childcare. Calculations refer to a couple with two children aged 2 and 3 where the other parent works full-time at 67% of the average wage.
+
+```{r}
+disincent <- as_tibble(read.csv("~/Desktop/great resignation/OECD datasets/financial disincent with childcare costs.csv"))
+
+disincent_sub <- disincent %>%  select(LOCATION, TIME, Value) %>% filter(LOCATION %in% c("USA","CAN", "GBR","DEU", "FRA", "ITA", "ESP", "NLD", "CHE", "SWE", "BEL", "IRL", "NOR", "DNK", "FIN"))
+
+colnames(disincent_sub) <- c('country', 'year', 'disincentive')
+
+disincent_sub$country[disincent_sub$country == 'USA'] <- "United States"
+disincent_sub$country[disincent_sub$country == 'CAN'] <- "Canada"
+disincent_sub$country[disincent_sub$country == 'GBR'] <- "United Kingdom"
+disincent_sub$country[disincent_sub$country == 'DEU'] <- "Germany"
+disincent_sub$country[disincent_sub$country == 'FRA'] <- "France"
+disincent_sub$country[disincent_sub$country == 'ITA'] <- "Italy"
+disincent_sub$country[disincent_sub$country == 'ESP'] <- "Spain"
+disincent_sub$country[disincent_sub$country == 'NLD'] <- "Netherlands"
+disincent_sub$country[disincent_sub$country == 'CHE'] <- "Switzerland"
+disincent_sub$country[disincent_sub$country == 'SWE'] <- "Sweden"
+disincent_sub$country[disincent_sub$country == 'BEL'] <- "Belgium"
+disincent_sub$country[disincent_sub$country == 'IRL'] <- "Ireland"
+disincent_sub$country[disincent_sub$country == 'NOR'] <- "Norway"
+disincent_sub$country[disincent_sub$country == 'DNK'] <- "Denmark"
+disincent_sub$country[disincent_sub$country == 'FIN'] <- "Finland"
+```
+
+### plot
+```{r}
+plot_disincent1 <- ggplot(disincent_sub[which(disincent_sub$year>2017),], aes(year, disincentive, group = country)) +
+  geom_line(aes(color = country))+
+  ggtitle("2018-2021 Financial disincentive to enter employment with childcare costs") +
+  facet_wrap(~country, nrow = 3, ncol = 5) +
+  theme_bw() +
+  theme(legend.title = element_blank()) +
+  xlab("Year")+
+  ylab("Financial disincentive")
+
+plot_disincent1
+```
+
+### Notes:
+Canada, Denmark, and the US financial disincentive are over 80, higher than other European countries.
+Sweden, Norway, Spain, and Italy are below 80, lower than other European countries.
+
+
+
+# Job leavers & starters
+Eurostat
+report:
+https://ec.europa.eu/eurostat/web/products-eurostat-news/-/ddn-20200422-2
+database:
+https://ec.europa.eu/eurostat/web/lfs/data/database
+
+I choose two datasets:
+two age groups: 20-64, 15-74. I choose 20-64 due to childcare considerations
+
+1. Recent job leavers by sex and age 2018 Q1-2022 Q2 quarterly, seasonally adjusted
+https://ec.europa.eu/eurostat/databrowser/view/LFSI_LEA_Q__custom_3611506/default/table?lang=en
+Recent job leavers are those persons who report to have left their job in the last 3 months before the interview
+
+
+2. Recent job starters by sex and age 2018 Q1-2022 Q2 quarterly, seasonally adjusted
+https://ec.europa.eu/eurostat/databrowser/view/LFSI_STA_Q__custom_3621184/default/table?lang=en
+Recent job starters are those persons who have started their employment in the last 3 months before the interview.
+
+
+```{r}
+library("readxl")
+```
+
+```{r}
+# job leavers 2018-2022
+leave_t <- read_excel("~/Desktop/great resignation/eurostat/new/2018-2022 job leave total.xlsx", sheet = 3)
+```
+
+
+```{r}
+#clean data and organize data structure
+tt <- leave_t [10:46,1:34]
+tt <- tt[-2,] 
+tt <- tt [, c(1, 2,4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34)] # 2018 Q1-2022 Q1 data
+```
+
+```{r}
+#create lists for variables
+time <- as.list(tt[1,])
+time[[1]]=NULL
+bel<- as.list(tt[2,])
+bel[[1]]=NULL
+den <- as.list(tt[5,])
+den[[1]]=NULL
+ger <- as.list(tt[6,])
+ger[[1]]=NULL
+ire <- as.list(tt[8,])
+ire[[1]]=NULL
+gree <- as.list(tt[9,])
+gree[[1]]=NULL
+spa <- as.list(tt[10,])
+spa[[1]]=NULL
+fran <- as.list(tt[11,])
+fran[[1]]=NULL
+ita <- as.list(tt[13,])
+ita[[1]]=NULL
+neth <- as.list(tt[20,])
+neth[[1]]=NULL
+fin <- as.list(tt[27,])
+fin[[1]]=NULL
+swed <- as.list(tt[28,])
+swed[[1]]=NULL
+ice <- as.list(tt[29,])
+ice[[1]]=NULL
+norw <- as.list(tt[30,])
+norw[[1]]=NULL
+switz <- as.list(tt[31,])
+switz[[1]]=NULL
+uk <- as.list(tt[32,])
+uk[[1]]=NULL
+```
+
+
+```{r}
+# repeat 17 times country name for each country
+n <- 17 # 17 for 2018 Q1-2022 Q1
+Belgium <- as.list(rep("Belgium",n))
+Denmark <- as.list(rep("Denmark",n))
+Germany <- as.list(rep("Germany",n))
+Ireland <- as.list(rep("Ireland",n))
+Greece <- as.list(rep("Greece",n))
+Spain <- as.list(rep("Spain",n))
+France <- as.list(rep("France",n))
+Italy <- as.list(rep("Italy",n))
+Netherlands <- as.list(rep("Netherlands",n))
+Finland <- as.list(rep("Finland",n))
+Sweden <- as.list(rep("Sweden",n))
+Iceland <- as.list(rep("Iceland",n))
+Norway  <- as.list(rep("Norway",n))
+Switzerland <- as.list(rep("Switzerland",n))
+United_Kingdom <- as.list(rep("United Kingdom",n))
+```
+
+
+```{r}
+#combine all country lists
+# country columns
+countrybel <- c("Country", Belgium)
+country <- c(countrybel,Denmark,Germany,Ireland,Greece,Spain,France, Italy,Netherlands,Finland,Sweden,Iceland,Norway,Switzerland,United_Kingdom)
+```
+
+
+```{r}
+#combine all values
+# values columns
+values <- c(bel,den,ger,ire,gree,spa,fran,ita,neth,fin,swed,ice,norw,switz,uk)
+values_all <- c("Values", values)
+```
+
+
+```{r}
+# time column
+# repeat for 15 countries
+n1=15
+time_rep <- rep(time, n1)
+time_all <- c("Time", time_rep)
+```
+
+
+```{r}
+# transpose columns to rows
+country1 <- t(as.data.frame(country))
+time1 <- t(as.data.frame(time_all))
+values1 <- t(as.data.frame(values_all))
+```
+
+
+```{r}
+# combine all
+leaveall <- as.data.frame(cbind(country1, time1, values1))
+# rename columns
+colnames(leaveall)[1] <- "Country"
+colnames(leaveall)[2] <- "Time"
+colnames(leaveall)[3] <- "Values"
+leaveall[-1,]
+```
+```{r}
+# export data
+#write.csv(leaveall,"~/Desktop/great resignation/eurostat/new/leaveall.csv", row.names = FALSE)
+```
+
+# data clean
+```{r}
+leave_m <- read_excel("~/Desktop/great resignation/eurostat/new/2018-2022 job leave sex.xlsx", sheet = 3)
+leave_w <- read_excel("~/Desktop/great resignation/eurostat/new/2018-2022 job leave sex.xlsx", sheet = 4)
+```
+
+clean male and female datasets
+
+## males
+```{r}
+#clean data and organize data structure
+tt <- leave_m [10:46,1:34]
+tt <- tt[-2,] 
+tt <- tt [, c(1, 2,4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34)] # 2018 Q1-2022 Q1 data
+```
+
+```{r}
+#create lists for variables
+time <- as.list(tt[1,])
+time[[1]]=NULL
+bel<- as.list(tt[2,])
+bel[[1]]=NULL
+den <- as.list(tt[5,])
+den[[1]]=NULL
+ger <- as.list(tt[6,])
+ger[[1]]=NULL
+ire <- as.list(tt[8,])
+ire[[1]]=NULL
+gree <- as.list(tt[9,])
+gree[[1]]=NULL
+spa <- as.list(tt[10,])
+spa[[1]]=NULL
+fran <- as.list(tt[11,])
+fran[[1]]=NULL
+ita <- as.list(tt[13,])
+ita[[1]]=NULL
+neth <- as.list(tt[20,])
+neth[[1]]=NULL
+fin <- as.list(tt[27,])
+fin[[1]]=NULL
+swed <- as.list(tt[28,])
+swed[[1]]=NULL
+ice <- as.list(tt[29,])
+ice[[1]]=NULL
+norw <- as.list(tt[30,])
+norw[[1]]=NULL
+switz <- as.list(tt[31,])
+switz[[1]]=NULL
+uk <- as.list(tt[32,])
+uk[[1]]=NULL
+```
+
+
+```{r}
+# repeat 17 times country name for each country
+n <- 17 # 17 for 2018 Q1-2022 Q1
+Belgium <- as.list(rep("Belgium",n))
+Denmark <- as.list(rep("Denmark",n))
+Germany <- as.list(rep("Germany",n))
+Ireland <- as.list(rep("Ireland",n))
+Greece <- as.list(rep("Greece",n))
+Spain <- as.list(rep("Spain",n))
+France <- as.list(rep("France",n))
+Italy <- as.list(rep("Italy",n))
+Netherlands <- as.list(rep("Netherlands",n))
+Finland <- as.list(rep("Finland",n))
+Sweden <- as.list(rep("Sweden",n))
+Iceland <- as.list(rep("Iceland",n))
+Norway  <- as.list(rep("Norway",n))
+Switzerland <- as.list(rep("Switzerland",n))
+United_Kingdom <- as.list(rep("United Kingdom",n))
+```
+
+
+```{r}
+#combine all country lists
+# country columns
+countrybel <- c("Country", Belgium)
+country <- c(countrybel,Denmark,Germany,Ireland,Greece,Spain,France, Italy,Netherlands,Finland,Sweden,Iceland,Norway,Switzerland,United_Kingdom)
+```
+
+
+```{r}
+#combine all values
+# values columns
+values <- c(bel,den,ger,ire,gree,spa,fran,ita,neth,fin,swed,ice,norw,switz,uk)
+values_all <- c("Values", values)
+```
+
+
+```{r}
+# time column
+# repeat for 15 countries
+n1=15
+time_rep <- rep(time, n1)
+time_all <- c("Time", time_rep)
+```
+
+
+```{r}
+# transpose columns to rows
+country1 <- t(as.data.frame(country))
+time1 <- t(as.data.frame(time_all))
+values1 <- t(as.data.frame(values_all))
+```
+
+
+```{r}
+# combine all
+leaveall <- as.data.frame(cbind(country1, time1, values1))
+# rename columns
+colnames(leaveall)[1] <- "Country"
+colnames(leaveall)[2] <- "Time"
+colnames(leaveall)[3] <- "Values"
+leaveall[-1,]
+```
+
+```{r}
+# export data
+#write.csv(leaveall,"~/Desktop/great resignation/eurostat/new/leavemale.csv", row.names = FALSE)
+```
+
+
+
+## females
+```{r}
+#clean data and organize data structure
+tt <- leave_w [10:46,1:34]
+tt <- tt[-2,] 
+tt <- tt [, c(1, 2,4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34)] # 2018 Q1-2022 Q1 data
+```
+
+```{r}
+#create lists for variables
+time <- as.list(tt[1,])
+time[[1]]=NULL
+bel<- as.list(tt[2,])
+bel[[1]]=NULL
+den <- as.list(tt[5,])
+den[[1]]=NULL
+ger <- as.list(tt[6,])
+ger[[1]]=NULL
+ire <- as.list(tt[8,])
+ire[[1]]=NULL
+gree <- as.list(tt[9,])
+gree[[1]]=NULL
+spa <- as.list(tt[10,])
+spa[[1]]=NULL
+fran <- as.list(tt[11,])
+fran[[1]]=NULL
+ita <- as.list(tt[13,])
+ita[[1]]=NULL
+neth <- as.list(tt[20,])
+neth[[1]]=NULL
+fin <- as.list(tt[27,])
+fin[[1]]=NULL
+swed <- as.list(tt[28,])
+swed[[1]]=NULL
+ice <- as.list(tt[29,])
+ice[[1]]=NULL
+norw <- as.list(tt[30,])
+norw[[1]]=NULL
+switz <- as.list(tt[31,])
+switz[[1]]=NULL
+uk <- as.list(tt[32,])
+uk[[1]]=NULL
+```
+
+
+```{r}
+# repeat 17 times country name for each country
+n <- 17 # 17 for 2018 Q1-2022 Q1
+Belgium <- as.list(rep("Belgium",n))
+Denmark <- as.list(rep("Denmark",n))
+Germany <- as.list(rep("Germany",n))
+Ireland <- as.list(rep("Ireland",n))
+Greece <- as.list(rep("Greece",n))
+Spain <- as.list(rep("Spain",n))
+France <- as.list(rep("France",n))
+Italy <- as.list(rep("Italy",n))
+Netherlands <- as.list(rep("Netherlands",n))
+Finland <- as.list(rep("Finland",n))
+Sweden <- as.list(rep("Sweden",n))
+Iceland <- as.list(rep("Iceland",n))
+Norway  <- as.list(rep("Norway",n))
+Switzerland <- as.list(rep("Switzerland",n))
+United_Kingdom <- as.list(rep("United Kingdom",n))
+```
+
+
+```{r}
+#combine all country lists
+# country columns
+countrybel <- c("Country", Belgium)
+country <- c(countrybel,Denmark,Germany,Ireland,Greece,Spain,France, Italy,Netherlands,Finland,Sweden,Iceland,Norway,Switzerland,United_Kingdom)
+```
+
+
+```{r}
+#combine all values
+# values columns
+values <- c(bel,den,ger,ire,gree,spa,fran,ita,neth,fin,swed,ice,norw,switz,uk)
+values_all <- c("Values", values)
+```
+
+
+```{r}
+# time column
+# repeat for 15 countries
+n1=15
+time_rep <- rep(time, n1)
+time_all <- c("Time", time_rep)
+```
+
+
+```{r}
+# transpose columns to rows
+country1 <- t(as.data.frame(country))
+time1 <- t(as.data.frame(time_all))
+values1 <- t(as.data.frame(values_all))
+```
+
+
+```{r}
+# combine all
+leaveall <- as.data.frame(cbind(country1, time1, values1))
+# rename columns
+colnames(leaveall)[1] <- "Country"
+colnames(leaveall)[2] <- "Time"
+colnames(leaveall)[3] <- "Values"
+leaveall[-1,]
+```
+
+```{r}
+# export data
+#write.csv(leaveall,"~/Desktop/great resignation/eurostat/new/leavefemale.csv", row.names = FALSE)
+```
+
+

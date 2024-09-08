@@ -1,0 +1,929 @@
+---
+title: "resignation pre"
+output:
+  word_document: default
+  html_document: default
+date: '2022-07-05'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r}
+getwd()
+```
+
+```{r}
+# load packages 
+lapply(c("ggplot2", "tidyverse", "dplyr", "viridis", "hrbrthemes", "reshape2", "readxl"), require, character.only = TRUE)
+```
+
+## openings, hires, employment
+
+```{r}
+# openings, hires, employment
+
+# load data
+emp_all <- read_excel("~/Desktop/great resignation/US datasets/emp_20-21.xlsx")
+emp_all $index <- 1:nrow(emp_all)
+emp_all$date <- seq(as.Date("2020-1-1"), as.Date("2021-12-1"), by = "months")
+emp_all<- subset(emp_all, select=-c(Date))
+emp_all_m <- melt(emp_all, id= c("index","date")) 
+emp_all_emp <- emp_all_m[49:72,]
+emp_all_op.h <- emp_all_m[1:48,]
+```
+
+###plot
+
+```{r}
+# plots
+plot.open.hire.emp<-
+  ggplot(emp_all_m, aes(x=date, y=value, color=variable)) +
+  geom_line(size=1)+
+  #scale_y_continuous(limits = c(0, 180000, by = 20000), name = "Employment number of persons (in thousand)",
+                  # sec.axis = sec_axis(~. * 0.1, name ="Openings/Hires number of persons (in thousand)"))+
+ scale_x_date(date_breaks = "2 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+  theme(legend.title = element_blank())+
+  labs(y="number of persons (thousand)",
+       title ="2020-2021 openings, hires, employment", 
+       subtitle= "total nonfarm, seasonally adjusted")
+
+plot.open.hire.emp
+```
+
+### comment:
+
+the number of overall employment experienced a sharp drop in April 2020, since then it has been recovering, close to the pre-pandemic level. "Job Openings as all positions that are open (not filled) on the last business day of the month." (<https://www.bls.gov/jlt/jltdef.htm#2>) Job openings haven been increasing while hires reached a brief rise in May, then decreased later on, maintaining at a relatively stable level till now. That means, employment recovery is slow and many available jobs have been not filled. This is called tight labor market: low unemployment, plentiful jobs, high quits, scarce workers.
+
+## quits
+
+### quits overall level
+
+```{r}
+## Quits and layoffs and discharges, total nonfarm, seasonally adjusted, December 2019–December 2021 (in thousands)
+quit<-read_excel("~/Desktop/great resignation/US datasets/quits overall.xlsx")
+
+# create new date
+
+quit$date <- seq(as.Date("2019-12-01"), as.Date("2022-05-01"), by = "months")
+
+# index
+quit$index <- 1:nrow(quit)
+
+## delete old Date
+quit <- select(quit, c(index, date, Quits, Layoffs.discharges))
+
+#melt
+quit_m <- melt(quit, id.vars = c('index', "date"))
+```
+
+
+# new quits rates by industry
+
+```{r}
+#quits rate
+
+#load datasets
+edu.health<- read_excel("~/Desktop/great resignation/US datasets/by industry/rate/edu_health.xlsx")%>%slice(14:17)
+leisure<- read_excel("~/Desktop/great resignation/US datasets/by industry/rate/leisure.xlsx")%>%slice(14:17)
+manufact<- read_excel("~/Desktop/great resignation/US datasets/by industry/rate/manu.xlsx")%>%slice(14:17)
+trade<- read_excel("~/Desktop/great resignation/US datasets/by industry/rate/trade.xlsx")%>%slice(14:17)
+prof<- read_excel("~/Desktop/great resignation/US datasets/by industry/rate/business.xlsx")%>%slice(14:17)
+finance<- read_excel("~/Desktop/great resignation/US datasets/by industry/rate/fin.xlsx")%>%slice(14:17)
+info<- read_excel("~/Desktop/great resignation/US datasets/by industry/rate/info.xlsx")%>%slice(14:17)
+min.log<- read_excel("~/Desktop/great resignation/US datasets/by industry/rate/mining.xlsx")%>%slice(14:17)
+construct<- read_excel("~/Desktop/great resignation/US datasets/by industry/rate/cons.xlsx")%>%slice(14:17)
+```
+
+
+```{r}
+# create new index, date
+
+library(lubridate)
+## create new date range
+date <- as.data.frame(seq(as.Date("2019-01-01"),as.Date("2022-07-01"), by = "months"))
+
+```
+
+
+```{r}
+# select values every row
+
+# education and health
+edu.health1 <- as.numeric(edu.health[1,2:13]) 
+edu.health2 <- as.numeric(edu.health[2,2:13]) 
+edu.health3 <- as.numeric(edu.health[3,2:13]) 
+edu.health4 <- as.numeric(edu.health[4,2:8])
+edu.health5 <-as.data.frame(c(edu.health1, edu.health2, edu.health3, edu.health4))
+edu.health.all<-as.data.frame(append(date, edu.health5))
+colnames(edu.health.all) <- c("Date", "level")
+
+# leisure
+leisure1 <- as.numeric(leisure[1,2:13]) 
+leisure2 <- as.numeric(leisure[2,2:13]) 
+leisure3 <- as.numeric(leisure[3,2:13]) 
+leisure4 <- as.numeric(leisure[4,2:8])
+leisure5 <-as.data.frame(c(leisure1, leisure2, leisure3, leisure4))
+leisure.all<-as.data.frame(append(date, leisure5))
+colnames(leisure.all) <- c("Date", "level")
+
+# manufacture
+manufact1 <- as.numeric(manufact[1,2:13]) 
+manufact2 <- as.numeric(manufact[2,2:13]) 
+manufact3 <- as.numeric(manufact[3,2:13]) 
+manufact4 <- as.numeric(manufact[4,2:8])
+manufact5 <-as.data.frame(c(manufact1, manufact2, manufact3, manufact4))
+manufact.all<-as.data.frame(append(date, manufact5))
+colnames(manufact.all) <- c("Date", "level")
+
+# trade
+trade1 <- as.numeric(trade[1,2:13]) 
+trade2 <- as.numeric(trade[2,2:13]) 
+trade3 <- as.numeric(trade[3,2:13]) 
+trade4 <- as.numeric(trade[4,2:8])
+trade5 <-as.data.frame(c(trade1, trade2, trade3, trade4))
+trade.all<-as.data.frame(append(date, trade5))
+colnames(trade.all) <- c("Date", "level")
+
+# professional and business
+prof1 <- as.numeric(prof[1,2:13]) 
+prof2 <- as.numeric(prof[2,2:13]) 
+prof3 <- as.numeric(prof[3,2:13]) 
+prof4 <- as.numeric(prof[4,2:8])
+prof5 <-as.data.frame(c(prof1, prof2, prof3, prof4))
+prof.all<-as.data.frame(append(date, prof5))
+colnames(prof.all) <- c("Date", "level")
+
+# finance activities
+finance1 <- as.numeric(finance[1,2:13]) 
+finance2 <- as.numeric(finance[2,2:13]) 
+finance3 <- as.numeric(finance[3,2:13]) 
+finance4 <- as.numeric(finance[4,2:8])
+finance5 <-as.data.frame(c(finance1, finance2, finance3, finance4))
+finance.all<-as.data.frame(append(date, finance5))
+colnames(finance.all) <- c("Date", "level")
+
+# information
+info1 <- as.numeric(info[1,2:13]) 
+info2 <- as.numeric(info[2,2:13]) 
+info3 <- as.numeric(info[3,2:13]) 
+info4 <- as.numeric(info[4,2:8])
+info5 <-as.data.frame(c(info1, info2, info3, info4))
+info.all<-as.data.frame(append(date, info5))
+colnames(info.all) <- c("Date", "level")
+
+# mining and logging
+min.log1 <- as.numeric(min.log[1,2:13]) 
+min.log2 <- as.numeric(min.log[2,2:13]) 
+min.log3 <- as.numeric(min.log[3,2:13]) 
+min.log4 <- as.numeric(min.log[4,2:8])
+min.log5 <-as.data.frame(c(min.log1, min.log2,min.log3, min.log4))
+min.log.all<-as.data.frame(append(date, min.log5))
+colnames(min.log.all) <- c("Date", "level")
+
+# construction
+construct1 <- as.numeric(construct[1,2:13]) 
+construct2 <- as.numeric(construct[2,2:13]) 
+construct3 <- as.numeric(construct[3,2:13]) 
+construct4 <- as.numeric(construct[4,2:8])
+construct5 <-as.data.frame(c(construct1, construct2, construct3, construct4))
+construct.all<-as.data.frame(append(date, construct5))
+colnames(construct.all) <- c("Date", "level")
+```
+
+```{r}
+#merge datasets
+library(tidyverse)
+#put all data frames into list
+quit.industry <- list( prof.all,edu.health.all, leisure.all, manufact.all, trade.all, finance.all, info.all, min.log.all, construct.all)
+
+#merge all data frames in list
+quit.industry %>% reduce(full_join, by='Date')
+quit.industry <-as.data.frame(quit.industry )
+quit.industry <- quit.industry[1:43,]#chose from jan2019 
+quit.industry<-quit.industry[,-c(3,5,7, 9, 11, 13, 15,17)]  
+
+colnames(quit.industry) <- c("date","professional.business","education.health", "leisure.hospitality", "manufacturing", "trade.transportation.utilities",  "finance", "information", "mining.loging", "construction") 
+```
+
+### plot quit rates
+```{r}
+## plot
+quit.industry$date <- seq(mdy("01-01-19"), mdy("07-01-22"), by = "months")
+
+# index
+quit.industry$index <- 1:nrow(quit.industry)
+
+
+#melt
+quit.industry_m <- melt(quit.industry, id.vars = c('index', "date"))
+```
+
+
+```{r}
+# plot
+library("RColorBrewer")
+plot.quit.indus1<- ggplot(quit.industry_m, aes(x=date, y=value, color=variable)) +
+  geom_line(size=.6)+
+  scale_colour_brewer(palette = "Paired", name= "industry")+
+  scale_x_date(date_breaks = "6 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+    labs(y="Rate", x = "Time",
+       title ="January 2019-July 2022 Quit Rates by Industry", 
+       subtitle = "Total nonfarm, seasonally adjusted") +
+       guides(color=guide_legend(title="Industry"))
+
+plot.quit.indus1
+```
+
+
+```{r}
+ggsave(plot = plot.quit.indus1, width = 7, height = 3, dpi = 300, filename = "quitsrate.PNG")
+```
+
+
+
+
+#### plot
+
+```{r}
+# plot
+
+plot.quit <- ggplot(quit_m, aes(x=date, y=value, color=variable)) +
+  geom_line(size=1)+
+  scale_x_date(date_breaks = "3 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+  theme(legend.title = element_blank())+
+  labs(y="number of persons (in thousand)",
+       title ="December 2019-December 2021 Quits and layoffs and discharges", 
+       subtitle = "total nonfarm, seasonally adjusted")
+
+plot.quit
+```
+
+#### comment:
+
+the number of layoffs peaked in April 2020, whereas quits reached lowest at the same time. But later, the number of quits have been increasing while layoffs decreasing. That means more and more workers voluntarily left the workplace and a decreasing number of people have experienced involuntary leaving since May 2020. Till May 2022, this tendency has not changed much. Clearly, there is "great resignation" during recovery.
+
+### quits by industry
+
+```{r}
+#load datasets
+edu.health<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Education and health services.xlsx")%>%slice(27:30)
+leisure<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Leisure and hospitality.xlsx")%>%slice(27:30)
+manufact<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Manufacturing.xlsx")%>%slice(27:30)
+trade<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Trade, transportation, and utilities.xlsx")%>%slice(27:30)
+prof<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Professional and business services.xlsx")%>%slice(27:30)
+finance<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Financial activities.xlsx")%>%slice(27:30)
+info<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Information.xlsx")%>%slice(27:30)
+min.log<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Mining and logging.xlsx")%>%slice(27:30)
+construct<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Construction.xlsx")%>%slice(27:30)
+
+
+# in leisure
+food <- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Accommodation and food services.xlsx")%>%slice(27:30)
+art <- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Arts, entertainment, and recreation.xlsx")%>%slice(27:30)
+
+# health & educ
+edu <- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Educational services.xlsx")%>%slice(27:30)
+health <- read_excel("~/Desktop/great resignation/US datasets/by industry/level/quits/Health care and social assistance.xlsx")%>%slice(27:30)
+```
+
+```{r}
+# select data range
+library(lubridate)
+## create new date range
+date <- as.data.frame(seq(as.Date("2019-01-01"),as.Date("2022-07-01"), by = "months")) # does not choose May data because it's just preliminary estimation
+
+# education and health
+edu.health1 <- as.numeric(edu.health[1,2:13]) 
+edu.health2 <- as.numeric(edu.health[2,2:13]) 
+edu.health3 <- as.numeric(edu.health[3,2:13]) 
+edu.health4 <- as.numeric(edu.health[4,2:8])
+edu.health5 <-as.data.frame(c(edu.health1, edu.health2, edu.health3, edu.health4))
+edu.health.all<-as.data.frame(append(date, edu.health5))
+colnames(edu.health.all) <- c("Date", "level")
+
+# leisure
+leisure1 <- as.numeric(leisure[1,2:13]) 
+leisure2 <- as.numeric(leisure[2,2:13]) 
+leisure3 <- as.numeric(leisure[3,2:13]) 
+leisure4 <- as.numeric(leisure[4,2:8])
+leisure5 <-as.data.frame(c(leisure1, leisure2, leisure3, leisure4))
+leisure.all<-as.data.frame(append(date, leisure5))
+colnames(leisure.all) <- c("Date", "level")
+
+# manufacture
+manufact1 <- as.numeric(manufact[1,2:13]) 
+manufact2 <- as.numeric(manufact[2,2:13]) 
+manufact3 <- as.numeric(manufact[3,2:13]) 
+manufact4 <- as.numeric(manufact[4,2:8])
+manufact5 <-as.data.frame(c(manufact1, manufact2, manufact3, manufact4))
+manufact.all<-as.data.frame(append(date, manufact5))
+colnames(manufact.all) <- c("Date", "level")
+
+# trade
+trade1 <- as.numeric(trade[1,2:13]) 
+trade2 <- as.numeric(trade[2,2:13]) 
+trade3 <- as.numeric(trade[3,2:13]) 
+trade4 <- as.numeric(trade[4,2:8])
+trade5 <-as.data.frame(c(trade1, trade2, trade3, trade4))
+trade.all<-as.data.frame(append(date, trade5))
+colnames(trade.all) <- c("Date", "level")
+
+# professional and business
+prof1 <- as.numeric(prof[1,2:13]) 
+prof2 <- as.numeric(prof[2,2:13]) 
+prof3 <- as.numeric(prof[3,2:13]) 
+prof4 <- as.numeric(prof[4,2:8])
+prof5 <-as.data.frame(c(prof1, prof2, prof3, prof4))
+prof.all<-as.data.frame(append(date, prof5))
+colnames(prof.all) <- c("Date", "level")
+
+# finance activities
+finance1 <- as.numeric(finance[1,2:13]) 
+finance2 <- as.numeric(finance[2,2:13]) 
+finance3 <- as.numeric(finance[3,2:13]) 
+finance4 <- as.numeric(finance[4,2:8])
+finance5 <-as.data.frame(c(finance1, finance2, finance3, finance4))
+finance.all<-as.data.frame(append(date, finance5))
+colnames(finance.all) <- c("Date", "level")
+
+# information
+info1 <- as.numeric(info[1,2:13]) 
+info2 <- as.numeric(info[2,2:13]) 
+info3 <- as.numeric(info[3,2:13]) 
+info4 <- as.numeric(info[4,2:8])
+info5 <-as.data.frame(c(info1, info2, info3, info4))
+info.all<-as.data.frame(append(date, info5))
+colnames(info.all) <- c("Date", "level")
+
+# mining and logging
+min.log1 <- as.numeric(min.log[1,2:13]) 
+min.log2 <- as.numeric(min.log[2,2:13]) 
+min.log3 <- as.numeric(min.log[3,2:13]) 
+min.log4 <- as.numeric(min.log[4,2:8])
+min.log5 <-as.data.frame(c(min.log1, min.log2,min.log3, min.log4))
+min.log.all<-as.data.frame(append(date, min.log5))
+colnames(min.log.all) <- c("Date", "level")
+
+# construction
+construct1 <- as.numeric(construct[1,2:13]) 
+construct2 <- as.numeric(construct[2,2:13]) 
+construct3 <- as.numeric(construct[3,2:13]) 
+construct4 <- as.numeric(construct[4,2:8])
+construct5 <-as.data.frame(c(construct1, construct2, construct3, construct4))
+construct.all<-as.data.frame(append(date, construct5))
+colnames(construct.all) <- c("Date", "level")
+```
+
+```{r}
+#merge datasets
+library(tidyverse)
+#put all data frames into list
+quit.industry <- list( prof.all,edu.health.all, leisure.all, manufact.all, trade.all, finance.all, info.all, min.log.all, construct.all)
+
+#merge all data frames in list
+quit.industry %>% reduce(full_join, by='Date')
+quit.industry <-as.data.frame(quit.industry )
+quit.industry <- quit.industry[1:43,]#chose from jan 2019 
+quit.industry<-quit.industry[,-c(3,5,7, 9, 11, 13, 15,17)]  #deletes columns
+
+colnames(quit.industry) <- c("date","professional","education.health", "leisure.hospitality", "manufacturing", "trade.transportation.utilities",  "finance", "information", "mining.loging", "construction") 
+```
+
+#### plot
+
+```{r}
+## plot
+quit.industry$date <- seq(mdy("01-01-19"), mdy("07-01-22"), by = "months")
+
+# index
+quit.industry$index <- 1:nrow(quit.industry)
+
+
+#melt
+quit.industry_m <- melt(quit.industry, id.vars = c('index', "date"))
+
+# plot
+library("RColorBrewer")
+plot.quit.indus<- ggplot(quit.industry_m, aes(x=date, y=value, color=variable)) +
+  geom_line(size=0.6)+
+  scale_colour_brewer(palette = "Paired", name= "industry")+
+  scale_x_date(date_breaks = "6 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+  labs(y="Number of persons (thousand)", x= "Time",
+       title ="January 2019-July 2022 Quits Numbers by Industry", 
+       subtitle = "Total nonfarm, seasonally adjusted")+
+       guides(color=guide_legend(title="Industry"))
+
+plot.quit.indus
+```
+
+## quits by new state
+```{r}
+state<- read_excel("~/Desktop/great resignation/US datasets/state/rate/stateclean.xlsx")
+state$Time<-as.Date(state$Time)
+
+```
+
+
+```{r}
+plotstate <- ggplot(state) +
+  geom_line(aes(x=Time, y=Quit, color=State))+
+  scale_x_date(date_breaks = "6 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+  labs(y="Quit Rate", x= "Time",
+       title ="January 2019-July 2022 Quit Rates in California and Florida", 
+       subtitle = "Total nonfarm, seasonally adjusted")
+ 
+
+plotstate
+```
+
+
+
+
+####comment: Noticeably, almost all industries (except mining and logging) drop to the lowest level in April, May, or June 2020 but later peaked in the end of 2021 or the beginning of 2022. In general, trade.transportation.utilities, leisure.hospitality, professional activities, education and health services show a very large number of quits during recovery.
+
+#### plot Gusto
+
+```{r out.width = "20%", fig.align = "center"}
+knitr::include_graphics("quits by gender.jpeg")
+
+#https://gusto.com/company-news/a-real-time-look-at-the-great-resignation#Quits_by_Gender
+```
+
+## hires by industry
+
+```{r}
+#load datasets
+edu.health<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/hires/Education and health services.xlsx")%>%slice(13:24)
+leisure<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/hires/Leisure and hospitality.xlsx")%>%slice(13:24)
+manufact<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/hires/Manufacturing.xlsx")%>%slice(13:24)
+trade<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/hires/Trade, transportation, and utilities.xlsx")%>%slice(13:24)
+prof<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/hires/Professional and business services.xlsx")%>%slice(13:24)
+finance<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/hires/Financial activities.xlsx")%>%slice(13:24)
+info<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/hires/Information.xlsx")%>%slice(13:24)
+min.log<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/hires/Mining and logging.xlsx")%>%slice(13:24)
+construct<- read_excel("~/Desktop/great resignation/US datasets/by industry/level/hires/Construction.xlsx")%>%slice(13:24)
+```
+
+```{r}
+# select data range
+library(lubridate)
+## create new date range
+date <- as.data.frame(seq(as.Date("2019-01-01"), as.Date("2022-03-01"), by = "months")) # does not choose May data because it's just preliminary estimation
+
+# education and health
+edu.health1 <- as.numeric(edu.health[9,2:13]) 
+edu.health2 <- as.numeric(edu.health[10,2:13]) 
+edu.health3 <- as.numeric(edu.health[11,2:13]) 
+edu.health4 <- as.numeric(edu.health[12,2:4]) # only to March 2022, because April is preliminary estimation
+edu.health5 <-as.data.frame(c(edu.health1, edu.health2, edu.health3, edu.health4))
+edu.health.all<-as.data.frame(append(date, edu.health5))
+colnames(edu.health.all) <- c("Date", "level")
+
+
+# leisure
+leisure1 <- as.numeric(leisure[9,2:13]) 
+leisure2 <- as.numeric(leisure[10,2:13]) 
+leisure3 <- as.numeric(leisure[11,2:13]) 
+leisure4 <- as.numeric(leisure[12,2:4])
+leisure5 <-as.data.frame(c(leisure1, leisure2, leisure3, leisure4))
+leisure.all<-as.data.frame(append(date, leisure5))
+colnames(leisure.all) <- c("Date", "level")
+
+# manufacture
+manufact1 <- as.numeric(manufact[9,2:13]) 
+manufact2 <- as.numeric(manufact[10,2:13]) 
+manufact3 <- as.numeric(manufact[11,2:13]) 
+manufact4 <- as.numeric(manufact[12,2:4])
+manufact5 <-as.data.frame(c(manufact1, manufact2, manufact3, manufact4))
+manufact.all<-as.data.frame(append(date, manufact5))
+colnames(manufact.all) <- c("Date", "level")
+
+# trade
+trade1 <- as.numeric(trade[9,2:13]) 
+trade2 <- as.numeric(trade[10,2:13]) 
+trade3 <- as.numeric(trade[11,2:13]) 
+trade4 <- as.numeric(trade[12,2:4])
+trade5 <-as.data.frame(c(trade1, trade2, trade3, trade4))
+trade.all<-as.data.frame(append(date, trade5))
+colnames(trade.all) <- c("Date", "level")
+
+# professional and business
+prof1 <- as.numeric(prof[9,2:13]) 
+prof2 <- as.numeric(prof[10,2:13]) 
+prof3 <- as.numeric(prof[11,2:13]) 
+prof4 <- as.numeric(prof[12,2:4])
+prof5 <-as.data.frame(c(prof1, prof2, prof3, prof4))
+prof.all<-as.data.frame(append(date, prof5))
+colnames(prof.all) <- c("Date", "level")
+
+# finance activities
+finance1 <- as.numeric(finance[9,2:13]) 
+finance2 <- as.numeric(finance[10,2:13]) 
+finance3 <- as.numeric(finance[11,2:13]) 
+finance4 <- as.numeric(finance[12,2:4])
+finance5 <-as.data.frame(c(finance1, finance2, finance3, finance4))
+finance.all<-as.data.frame(append(date, finance5))
+colnames(finance.all) <- c("Date", "level")
+
+# information
+info1 <- as.numeric(info[9,2:13]) 
+info2 <- as.numeric(info[10,2:13]) 
+info3 <- as.numeric(info[11,2:13]) 
+info4 <- as.numeric(info[12,2:4])
+info5 <-as.data.frame(c(info1, info2, info3, info4))
+info.all<-as.data.frame(append(date, info5))
+colnames(info.all) <- c("Date", "level")
+
+# mining and logging
+min.log1 <- as.numeric(min.log[9,2:13]) 
+min.log2 <- as.numeric(min.log[10,2:13]) 
+min.log3 <- as.numeric(min.log[11,2:13]) 
+min.log4 <- as.numeric(min.log[12,2:4])
+min.log5 <-as.data.frame(c(min.log1, min.log2,min.log3, min.log4))
+min.log.all<-as.data.frame(append(date, min.log5))
+colnames(min.log.all) <- c("Date", "level")
+
+# construction
+construct1 <- as.numeric(construct[9,2:13]) 
+construct2 <- as.numeric(construct[10,2:13]) 
+construct3 <- as.numeric(construct[11,2:13]) 
+construct4 <- as.numeric(construct[12,2:4])
+construct5 <-as.data.frame(c(construct1, construct2, construct3, construct4))
+construct.all<-as.data.frame(append(date, construct5))
+colnames(construct.all) <- c("Date", "level")
+```
+
+```{r}
+#merge datasets
+library(tidyverse)
+#put all data frames into list
+hire.industry <- list( prof.all,edu.health.all, leisure.all, manufact.all, trade.all, finance.all, info.all, min.log.all, construct.all)
+
+#merge all data frames in list
+hire.industry %>% reduce(full_join, by='Date')
+hire.industry <-as.data.frame(hire.industry )
+
+#time
+hire.industry <- hire.industry[1:43,]#chose from Jan 2019 
+hire.industry<-hire.industry[,-c(3,5,7, 9, 11, 13, 15,17)]  #deletes columns
+
+colnames(hire.industry) <- c("date","professional","education.health", "leisure.hospitality", "manufacturing", "trade.transportation.utilities",  "finance", "information", "mining.loging", "construction") 
+```
+
+###plot
+
+```{r}
+## plot
+hire.industry$date <- seq(as.Date("2019-12-01"), as.Date("2022-03-01"), by = "months")
+
+# index
+hire.industry$index <- 1:nrow(hire.industry)
+
+#melt
+hire.industry_m <- melt(hire.industry, id.vars = c('index', "date"))
+
+# plot
+library("RColorBrewer")
+plot.hire.indus<- ggplot(hire.industry_m, aes(x=date, y=value, color=variable)) +
+  geom_line(size=1)+
+  scale_colour_brewer(palette = "Paired", name= "industry")+
+  scale_x_date(date_breaks = "3 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+  labs(y="number of persons (thousand)",
+       title ="December 2019-December 2021 Hires by industry", 
+       subtitle = "total nonfarm, seasonally adjusted")
+
+plot.hire.indus
+```
+
+```{r}
+ggsave(plot = plot.quit.indus, width = 7, height = 3, dpi = 300, filename = "quitsnum.PNG")
+```
+
+
+### comment:
+
+except for mining, logging, and information, most industries increased the number of hires after the peak of pandemic (Apirl 2020) in May, June, and July. In particular, leisure and hospitality was the highest but later it drop significantly. The change scale is the largest. The education and health services also experienced a large scale of reduction.
+
+
+## align two plots quits numbers and rates
+```{r}
+library(ggplot2)
+plot.quit.indus3<- ggplot(quit.industry_m, aes(x=date, y=value, color=variable)) +
+  geom_line(size=0.6,show.legend = FALSE)+
+  scale_colour_brewer(palette = "Paired", name= "industry")+
+  scale_x_date(date_breaks = "6 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+  labs(y="Number of persons (thousand)", x= "Time",
+       subtitle = "Quits Numbers")+
+       theme(legend.title = element_blank()) 
+
+plot.quit.indus3
+```
+
+```{r}
+plot.quit.indus4<- ggplot(quit.industry_m, aes(x=date, y=value, color=variable)) +
+  geom_line(size=.6,show.legend = FALSE)+
+  scale_colour_brewer(palette = "Paired", name= "industry")+
+  scale_x_date(date_breaks = "6 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+    labs(y="Rate", x = "Time",
+       subtitle = "Quits Rates") +
+        theme(legend.title = element_blank())
+
+plot.quit.indus4
+```
+
+
+```{r}
+#install.packages("gridExtra")
+library(ggpubr)
+ggarrange(plot.quit.indus3, plot.quit.indus4, row =2,
+             top="January 2019-July 2022 Quits by Industry",
+              common.legend = TRUE, legend = "bottom")
+```
+
+
+
+
+
+## labor force participation rate by gender and race (\>16, unadjusted)
+
+only black and white groups have seasonally adjusted data. So in order keep consistent, I choose unadjusted data.
+
+```{r}
+library(readxl)
+whtmen <- read_excel("~/Desktop/great resignation/US datasets/lfpr/unadjust/whtmen.xlsx") %>% slice(13:30)
+whtwomen <- read_excel("~/Desktop/great resignation/US datasets/lfpr/unadjust/whtwomen.xlsx")%>% slice(13:30)
+blkmen <- read_excel("~/Desktop/great resignation/US datasets/lfpr/unadjust/blkmen.xlsx")%>% slice(13:30)
+blkwomen <- read_excel("~/Desktop/great resignation/US datasets/lfpr/unadjust/blkwomen.xlsx")%>% slice(13:30)
+asiamen <- read_excel("~/Desktop/great resignation/US datasets/lfpr/unadjust/asiamen.xlsx")%>% slice(13:30)
+asiawomen <- read_excel("~/Desktop/great resignation/US datasets/lfpr/unadjust/asiawomen.xlsx")%>% slice(13:30)
+latmen <- read_excel("~/Desktop/great resignation/US datasets/lfpr/unadjust/latmen.xlsx")%>% slice(13:30)
+latwomen <- read_excel("~/Desktop/great resignation/US datasets/lfpr/unadjust/latwomen.xlsx")%>% slice(13:30)
+```
+
+```{r}
+#white men
+library(lubridate)
+date <- as.data.frame(seq(as.Date("2019-01-01"), as.Date("2022-06-01"), by = "months"))
+rate19 <- as.numeric(whtmen[15,2:13])
+rate20 <- as.numeric(whtmen[16,2:13])
+rate21 <- as.numeric(whtmen[17,2:13])
+rate22 <- as.numeric(whtmen[18,2:7])
+rate <-as.data.frame(c(rate19, rate20, rate21, rate22))
+wm<-as.data.frame(append(date, rate))
+colnames(wm) <- c("Date", "white.men")
+```
+
+```{r}
+#white women
+wwrate19 <- as.numeric(whtwomen[9,2:13])
+wwrate20 <- as.numeric(whtwomen[10,2:13])
+wwrate21 <- as.numeric(whtwomen[11,2:13])
+wwrate22 <- as.numeric(whtwomen[12,2:7])
+wwrate <-as.data.frame(c(wwrate19, wwrate20, wwrate21, wwrate22))
+#append white women to existing white men dataframe, become a all lfpr
+lfpr <- as.data.frame(append(wm, wwrate))
+colnames(lfpr) <- c("Date", "white.men", "white.women")
+```
+
+```{r}
+#black men
+bmrate19 <- as.numeric(blkmen[9,2:13])
+bmrate20 <- as.numeric(blkmen[10,2:13])
+bmrate21 <- as.numeric(blkmen[11,2:13])
+bmrate22 <- as.numeric(blkmen[12,2:7])
+bmrate <-as.data.frame(c(bmrate19, bmrate20, bmrate21, bmrate22))
+#append blackmen to lfpr
+lfpr <- as.data.frame(append(lfpr, bmrate))
+colnames(lfpr) <- c("Date", "white.men", "white.women", "black.men")
+```
+
+```{r}
+#black women
+bwrate19 <- as.numeric(blkwomen[15,2:13])
+bwrate20 <- as.numeric(blkwomen[16,2:13])
+bwrate21 <- as.numeric(blkwomen[17,2:13])
+bwrate22 <- as.numeric(blkwomen[18,2:7])
+bwrate <-as.data.frame(c(bwrate19, bwrate20, bwrate21, bwrate22))
+#append blackwomen to lfpr
+lfpr <- as.data.frame(append(lfpr, bwrate))
+colnames(lfpr) <- c("Date", "white.men", "white.women", "black.men", "black.women")
+```
+
+```{r}
+#asian men
+amrate19 <- as.numeric(asiamen[15,2:13])
+amrate20 <- as.numeric(asiamen[16,2:13])
+amrate21 <- as.numeric(asiamen[17,2:13])
+amrate22 <- as.numeric(asiamen[18,2:7])
+amrate <-as.data.frame(c(amrate19, amrate20, amrate21, amrate22))
+#append asiamen to lfpr
+lfpr <- as.data.frame(append(lfpr, amrate))
+colnames(lfpr) <- c("Date", "white.men", "white.women", "black.men", "black.women", "asian.men")
+```
+
+```{r}
+#asian women
+awrate19 <- as.numeric(asiawomen[15,2:13])
+awrate20 <- as.numeric(asiawomen[16,2:13])
+awrate21 <- as.numeric(asiawomen[17,2:13])
+awrate22 <- as.numeric(asiawomen[18,2:7])
+awrate <-as.data.frame(c(awrate19, awrate20, awrate21, awrate22))
+#append asiawomen to lfpr
+lfpr <- as.data.frame(append(lfpr, awrate))
+colnames(lfpr) <- c("Date", "white.men", "white.women", "black.men", "black.women", "asian.men", "asian.women")
+```
+
+```{r}
+#hispanic men
+hmrate19 <- as.numeric(latmen[15,2:13])
+hmrate20 <- as.numeric(latmen[16,2:13])
+hmrate21 <- as.numeric(latmen[17,2:13])
+hmrate22 <- as.numeric(latmen[18,2:7])
+hmrate <-as.data.frame(c(hmrate19, hmrate20, hmrate21, hmrate22))
+#append asiamen to lfpr
+lfpr <- as.data.frame(append(lfpr, hmrate))
+colnames(lfpr) <- c("Date", "white.men", "white.women", "black.men", "black.women", "asian.men", "asian.women", "hispanic.men")
+```
+
+```{r}
+#hispanic women
+hwrate19 <- as.numeric(latwomen[15,2:13])
+hwrate20 <- as.numeric(latwomen[16,2:13])
+hwrate21 <- as.numeric(latwomen[17,2:13])
+hwrate22 <- as.numeric(latwomen[18,2:7])
+hwrate <-as.data.frame(c(hwrate19, hwrate20, hwrate21, hwrate22))
+#append asiamen to lfpr
+lfpr <- as.data.frame(append(lfpr, hwrate))
+colnames(lfpr) <- c("Date", "white.men", "white.women", "black.men", "black.women", "asian.men", "asian.women", "hispanic.men", "hispanic.women")
+```
+
+```{r}
+#merge data
+lfpr$index <- 1:nrow(lfpr)
+lfpr_m <- melt(lfpr, id.vars = c('index','Date'))
+```
+
+###plot
+
+```{r}
+library("RColorBrewer")
+plot.lbfr<-ggplot(lfpr_m, aes(x=Date, y=value, color=variable)) +
+  geom_line(size=1)+
+  scale_color_manual(values=c('deepskyblue3','deepskyblue','black', 'azure4', 'darkgreen','darkolivegreen3', 'chocolate3', 'darkgoldenrod1'))+
+ scale_x_date(date_breaks = "4 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+  theme(legend.title = element_blank())+
+  labs(y="labor force participation rate",
+       title ="2019-2021 labor force participation rate", 
+       subtitle= "age 16+, unadjusted")
+plot.lbfr
+```
+
+### comment:
+
+age 16 and over population's labor force participation rate shows a significant gender difference but not much expected ethnic difference.
+
+I did 25-54 prime working-age population lfpr (the core of the US workforce), men's lbfr is very similar except for black men's lbfr is the lowest. Black women is lbfr is the highest, white women is slightly lower, but pretty close. These two goups' lbfrs are much higher than other female groups. \### other 25-54
+
+```{r out.width = "20%", fig.align = "center"}
+knitr::include_graphics("25-54lfpr.png")
+```
+
+## employment rate (16+, unadjusted)
+
+```{r message=FALSE}
+library(readxl)
+whtmen.e <- read_excel("~/Desktop/great resignation/US datasets/employ/whtmen.xlsx") %>% slice(13:30) 
+whtwomen.e <- read_excel("~/Desktop/great resignation/US datasets/employ/whtwomen.xlsx")%>% slice(13:30)
+blkmen.e <- read_excel("~/Desktop/great resignation/US datasets/employ/blkmen.xlsx") %>% slice(13:30)
+blkwomen.e <- read_excel("~/Desktop/great resignation/US datasets/employ/blkwomen.xlsx")%>% slice(13:30)
+asiamen.e <- read_excel("~/Desktop/great resignation/US datasets/employ/asiamen.xlsx") %>% slice(13:30)
+asiawomen.e <- read_excel("~/Desktop/great resignation/US datasets/employ/asiawomen.xlsx")%>% slice(13:30)
+hismen.e <- read_excel("~/Desktop/great resignation/US datasets/employ/hisman.xlsx") %>% slice(13:30)
+hiswomen.e <- read_excel("~/Desktop/great resignation/US datasets/employ/hiswomen.xlsx")%>% slice(13:30)
+
+#white men
+library(lubridate)
+date <- as.data.frame(seq(mdy("01-01-19"), mdy("06-01-22"), by = "months"))
+rate19 <- as.numeric(whtmen.e[15,2:13])
+rate20 <- as.numeric(whtmen.e[16,2:13])
+rate21 <- as.numeric(whtmen.e[17,2:13])
+rate22 <- as.numeric(whtmen.e[18,2:7])
+rate <-as.data.frame(c(rate19, rate20, rate21, rate22))
+wm<-as.data.frame(append(date, rate))
+colnames(wm) <- c("Date", "white.men")
+
+#white women
+wwrate19 <- as.numeric(whtwomen.e[15,2:13])
+wwrate20 <- as.numeric(whtwomen.e[16,2:13])
+wwrate21 <- as.numeric(whtwomen.e[17,2:13])
+wwrate22 <- as.numeric(whtwomen.e[18,2:7])
+wwrate <-as.data.frame(c(wwrate19, wwrate20, wwrate21, wwrate22))
+#append white women to existing white men dataframe, become a all emp rate
+emp <- as.data.frame(append(wm, wwrate))
+colnames(emp) <- c("Date", "white.men", "white.women")
+
+#black men
+bmrate19 <- as.numeric(blkmen.e[15,2:13])
+bmrate20 <- as.numeric(blkmen.e[16,2:13])
+bmrate21 <- as.numeric(blkmen.e[17,2:13])
+bmrate22 <- as.numeric(blkmen.e[18,2:7])
+bmrate <-as.data.frame(c(bmrate19, bmrate20, bmrate21, bmrate22))
+#append blackmen to emp
+emp <- as.data.frame(append(emp, bmrate))
+colnames(emp) <- c("Date", "white.men", "white.women", "black.men")
+
+#black women
+bwrate19 <- as.numeric(blkwomen.e[15,2:13])
+bwrate20 <- as.numeric(blkwomen.e[16,2:13])
+bwrate21 <- as.numeric(blkwomen.e[17,2:13])
+bwrate22 <- as.numeric(blkwomen.e[18,2:7])
+bwrate <-as.data.frame(c(bwrate19, bwrate20, bwrate21, bwrate22))
+#append blackwomen to emp
+emp <- as.data.frame(append(emp, bwrate))
+colnames(emp) <- c("Date", "white.men", "white.women", "black.men", "black.women")
+
+#asian men
+amrate19 <- as.numeric(asiamen.e[15,2:13])
+amrate20 <- as.numeric(asiamen.e[16,2:13])
+amrate21 <- as.numeric(asiamen.e[17,2:13])
+amrate22 <- as.numeric(asiamen.e[18,2:7])
+amrate <-as.data.frame(c(amrate19, amrate20, amrate21, amrate22))
+#append asiamen to emp
+emp <- as.data.frame(append(emp, amrate))
+colnames(emp) <- c("Date", "white.men", "white.women", "black.men", "black.women", "asian.men")
+
+#asian women
+awrate19 <- as.numeric(asiawomen.e[15,2:13])
+awrate20 <- as.numeric(asiawomen.e[16,2:13])
+awrate21 <- as.numeric(asiawomen.e[17,2:13])
+awrate22 <- as.numeric(asiawomen.e[18,2:7])
+awrate <-as.data.frame(c(awrate19, awrate20, awrate21, awrate22))
+#append asiawomen to emp
+emp <- as.data.frame(append(emp, awrate))
+colnames(emp) <- c("Date", "white.men", "white.women", "black.men", "black.women", "asian.men", "asian.women")
+
+#hispanic men
+hmrate19 <- as.numeric(hismen.e[15,2:13])
+hmrate20 <- as.numeric(hismen.e[16,2:13])
+hmrate21 <- as.numeric(hismen.e[17,2:13])
+hmrate22 <- as.numeric(hismen.e[18,2:7])
+hmrate <-as.data.frame(c(hmrate19, hmrate20, hmrate21, hmrate22))
+#append hismen to emp
+emp <- as.data.frame(append(emp, hmrate))
+colnames(emp) <- c("Date", "white.men", "white.women", "black.men", "black.women", "asian.men", "asian.women", "hispanic.men")
+
+#hispanic women
+hwrate19 <- as.numeric(hiswomen.e[15,2:13])
+hwrate20 <- as.numeric(hiswomen.e[16,2:13])
+hwrate21 <- as.numeric(hiswomen.e[17,2:13])
+hwrate22 <- as.numeric(hiswomen.e[18,2:7])
+hwrate <-as.data.frame(c(hwrate19, hwrate20, hwrate21, hwrate22))
+#append hiswomen to emp
+emp <- as.data.frame(append(emp, hwrate))
+colnames(emp) <- c("Date", "white.men", "white.women", "black.men", "black.women", "asian.men", "asian.women", "hispanic.men", "hispanic.women")
+
+#merge
+emp$index <- 1:nrow(emp)
+emp_m <- melt(emp, id.vars = c('index','Date'))
+
+```
+
+###plot
+
+```{r}
+#library("RColorBrewer")
+ggplot(emp_m, aes(x=Date, y=value, color=variable)) +
+  geom_line(size=1)+
+  scale_color_manual(values=c('deepskyblue3','deepskyblue','black', 'azure4', 'darkgreen','darkolivegreen3', 'chocolate3', 'darkgoldenrod1'))+
+ scale_x_date(date_breaks = "4 months", date_minor_breaks = "1 month",
+             date_labels = "%b %y")+
+  theme_bw() +
+  theme(legend.title = element_blank())+
+  labs(y="employment rate (%)",
+       title ="2019-2021 employment rate age 16+, unadjusted")
+```
+
+### comment:
+
+the employment rates of women in all ethical groups all are lower than that of men. In recovery, Hispanic men's employment rate is highest while black men's rate is the lowest.
